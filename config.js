@@ -17,6 +17,7 @@ window.APP_CONFIG = {
     sections: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFio-W4GioCvK2y0eVkwhffsnpe1kbNyHlrS29nycRWwTmn8dbUFiBFAwsGh4fog_Mm7HxplvydD32/pub?gid=967668392&single=true&output=csv",
     sources: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFio-W4GioCvK2y0eVkwhffsnpe1kbNyHlrS29nycRWwTmn8dbUFiBFAwsGh4fog_Mm7HxplvydD32/pub?gid=977653018&single=true&output=csv",
     files: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFio-W4GioCvK2y0eVkwhffsnpe1kbNyHlrS29nycRWwTmn8dbUFiBFAwsGh4fog_Mm7HxplvydD32/pub?gid=6886393&single=true&output=csv",
-    calendar: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFio-W4GioCvK2y0eVkwhffsnpe1kbNyHlrS29nycRWwTmn8dbUFiBFAwsGh4fog_Mm7HxplvydD32/pub?gid=1381170568&single=true&output=csv"
+    calendar: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFio-W4GioCvK2y0eVkwhffsnpe1kbNyHlrS29nycRWwTmn8dbUFiBFAwsGh4fog_Mm7HxplvydD32/pub?gid=1381170568&single=true&output=csv",
+    history: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFio-W4GioCvK2y0eVkwhffsnpe1kbNyHlrS29nycRWwTmn8dbUFiBFAwsGh4fog_Mm7HxplvydD32/pub?gid=344317764&single=true&output=csv"
   }
 }
