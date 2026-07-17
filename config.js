@@ -4,6 +4,7 @@ window.APP_CONFIG = {
   researcherName: "نام شما",
   thesisTitle: "عنوان کامل رساله دکتری",
   chapterTwoTarget: 15000,
+  chapterThreeTarget: 8000,
 
   links: {
     googleSheet: "https://docs.google.com/spreadsheets/d/1DwnB1iZFr1KZeg88pc4TFMSGV5ROkImfsRX06pEnnaI/edit?pli=1&gid=6886393#gid=6886393",
