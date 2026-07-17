@@ -5,7 +5,8 @@ const state = {
   weekly: [],
   sections: [],
   sources: [],
-  files: []
+  files: [],
+  calendar: []
 }
 
 const demoSections = [
@@ -150,14 +151,15 @@ function bindActions() {
 }
 
 async function loadAllData(force = false) {
-  const cacheKey = force ? `?refresh=${Date.now()}` : ""
+  const cacheKey = force ? `refresh=${Date.now()}` : ""
 
   const jobs = [
     loadDataset("annual", config.csv?.annual, cacheKey),
     loadDataset("weekly", config.csv?.weekly, cacheKey),
     loadDataset("sections", config.csv?.sections, cacheKey),
     loadDataset("sources", config.csv?.sources, cacheKey),
-    loadDataset("files", config.csv?.files, cacheKey)
+    loadDataset("files", config.csv?.files, cacheKey),
+    loadDataset("calendar", config.csv?.calendar, cacheKey)
   ]
 
   await Promise.all(jobs)
@@ -182,7 +184,10 @@ async function loadDataset(key, url, cacheKey) {
   }
 
   try {
-    const response = await fetch(url + cacheKey)
+    const requestUrl = cacheKey
+      ? `${url}${url.includes("?") ? "&" : "?"}${cacheKey}`
+      : url
+    const response = await fetch(requestUrl)
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const text = await response.text()
     state[key] = parsePublishedSheet(text)
@@ -294,6 +299,7 @@ function renderAll() {
   renderSections()
   renderSources()
   renderFiles()
+  renderCalendar()
 }
 
 function renderDashboard() {
@@ -668,13 +674,13 @@ function statusBadge(status) {
   const value = String(status || "شروع نشده")
   let className = "status-not-started"
 
-  if (["انجام شد", "مطالعه شده", "استفاده شده در متن", "تکمیل شده"].includes(value)) {
+  if (["انجام شد", "انجام‌شده", "مطالعه شده", "استفاده شده در متن", "تکمیل شده"].includes(value)) {
     className = "status-done"
   } else if (["در حال انجام", "در حال مطالعه"].includes(value)) {
     className = "status-progress"
-  } else if (["بخشی انجام شد", "انتخاب شده"].includes(value)) {
+  } else if (["بخشی انجام شد", "انتخاب شده", "برنامه‌ریزی‌شده"].includes(value)) {
     className = "status-partial"
-  } else if (["منتقل شد", "کنار گذاشته شده"].includes(value)) {
+  } else if (["منتقل شد", "کنار گذاشته شده", "به‌تعویق‌افتاده", "لغوشده", "عقب‌افتاده"].includes(value)) {
     className = "status-moved"
   }
 
@@ -735,6 +741,201 @@ function escapeHTML(value) {
 
 function escapeAttribute(value) {
   return escapeHTML(value)
+}
+
+
+function renderCalendar() {
+  const events = getSortedCalendarEvents()
+  renderUpcomingEvents(events)
+  renderCalendarSummary(events)
+  renderTimeline(events)
+}
+
+function getSortedCalendarEvents() {
+  return state.calendar
+    .filter(row => row["عنوان"] && eventDateValue(row))
+    .map(row => ({
+      ...row,
+      dateObject: parseEventDate(eventDateValue(row))
+    }))
+    .filter(row => row.dateObject)
+    .sort((a, b) => a.dateObject - b.dateObject)
+}
+
+function eventDateValue(row) {
+  return row["تاریخ"] || row["تاریخ شروع"] || row["موعد"] || ""
+}
+
+function parseEventDate(value) {
+  const normalized = String(value || "")
+    .trim()
+    .replace(/[۰-۹]/g, digit => "۰۱۲۳۴۵۶۷۸۹".indexOf(digit))
+    .replace(/[٠-٩]/g, digit => "٠١٢٣٤٥٦٧٨٩".indexOf(digit))
+    .replace(/\//g, "-")
+
+  const parts = normalized.split("-").map(Number)
+  if (parts.length !== 3 || parts.some(part => !Number.isFinite(part))) return null
+
+  const [year, month, day] = parts
+  const date = new Date(year, month - 1, day)
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) return null
+
+  return date
+}
+
+function renderUpcomingEvents(events) {
+  const container = document.getElementById("upcomingEvents")
+  if (!container) return
+
+  if (!isConfiguredUrl(config.csv?.calendar)) {
+    container.innerHTML = setupMessage("لینک CSV شیت «تقویم» را در config.js وارد کنید")
+    return
+  }
+
+  const today = startOfDay(new Date())
+  const upcoming = events
+    .filter(event =>
+      event.dateObject >= today &&
+      !["انجام‌شده", "انجام شد", "لغوشده"].includes(event["وضعیت"])
+    )
+    .slice(0, 3)
+
+  if (!upcoming.length) {
+    container.innerHTML = `<div class="empty-state">موعد آینده‌ای ثبت نشده است</div>`
+    return
+  }
+
+  container.innerHTML = upcoming.map(event => {
+    const days = daysBetween(today, event.dateObject)
+    const countdown = days === 0 ? "امروز" : `${faNumber(days)} روز مانده`
+
+    return `
+      <article class="upcoming-card">
+        <div class="event-date">
+          <strong>${formatPersianDay(event.dateObject)}</strong>
+          <span>${formatPersianMonth(event.dateObject)}</span>
+        </div>
+        <div class="event-content">
+          <span class="event-section">${escapeHTML(event["بخش"] || event["نوع"] || "نقطه عطف")}</span>
+          <h4>${escapeHTML(event["عنوان"])}</h4>
+          <p>${escapeHTML(event["توضیح"] || "")}</p>
+        </div>
+        <div class="days-left">${countdown}</div>
+      </article>
+    `
+  }).join("")
+}
+
+function renderCalendarSummary(events) {
+  const container = document.getElementById("calendarSummary")
+  if (!container) return
+
+  if (!isConfiguredUrl(config.csv?.calendar)) {
+    container.innerHTML = ""
+    return
+  }
+
+  const today = startOfDay(new Date())
+  const completed = events.filter(event => ["انجام‌شده", "انجام شد"].includes(event["وضعیت"])).length
+  const delayed = events.filter(event =>
+    event.dateObject < today &&
+    !["انجام‌شده", "انجام شد", "لغوشده"].includes(event["وضعیت"])
+  ).length
+  const nextEvent = events.find(event =>
+    event.dateObject >= today &&
+    !["انجام‌شده", "انجام شد", "لغوشده"].includes(event["وضعیت"])
+  )
+
+  const cards = [
+    { label: "کل نقاط عطف", value: faNumber(events.length), icon: "◉" },
+    { label: "انجام‌شده", value: faNumber(completed), icon: "✓" },
+    { label: "عقب‌افتاده", value: faNumber(delayed), icon: "!" },
+    { label: "موعد بعدی", value: nextEvent ? formatPersianDate(nextEvent.dateObject) : "ثبت نشده", icon: "◷" }
+  ]
+
+  container.innerHTML = cards.map(card => `
+    <article class="calendar-stat">
+      <span class="calendar-stat-icon">${card.icon}</span>
+      <div>
+        <small>${escapeHTML(card.label)}</small>
+        <strong>${escapeHTML(card.value)}</strong>
+      </div>
+    </article>
+  `).join("")
+}
+
+function renderTimeline(events) {
+  const container = document.getElementById("timeline")
+  if (!container) return
+
+  if (!isConfiguredUrl(config.csv?.calendar)) {
+    container.innerHTML = setupMessage("لینک CSV شیت «تقویم» را در config.js وارد کنید")
+    return
+  }
+
+  if (!events.length) {
+    container.innerHTML = `<div class="empty-state">رویدادی در شیت تقویم ثبت نشده است</div>`
+    return
+  }
+
+  const today = startOfDay(new Date())
+
+  container.innerHTML = events.map(event => {
+    const completed = ["انجام‌شده", "انجام شد"].includes(event["وضعیت"])
+    const delayed = event.dateObject < today && !completed && event["وضعیت"] !== "لغوشده"
+    const timelineClass = completed
+      ? "timeline-completed"
+      : delayed
+        ? "timeline-delayed"
+        : "timeline-upcoming"
+    const link = event["لینک"]
+
+    return `
+      <article class="timeline-item ${timelineClass}">
+        <div class="timeline-marker"></div>
+        <div class="timeline-card">
+          <div class="timeline-top">
+            <div>
+              <span class="event-section">${escapeHTML(event["بخش"] || event["نوع"] || "نقطه عطف")}</span>
+              <h3>${escapeHTML(event["عنوان"])}</h3>
+            </div>
+            ${delayed ? statusBadge("عقب‌افتاده") : statusBadge(event["وضعیت"] || "برنامه‌ریزی‌شده")}
+          </div>
+          <div class="timeline-date">${formatPersianDate(event.dateObject)}</div>
+          ${event["توضیح"] ? `<p>${escapeHTML(event["توضیح"])}</p>` : ""}
+          ${isConfiguredUrl(link) ? `<a class="card-link" href="${escapeAttribute(link)}" target="_blank" rel="noopener">مشاهده خروجی ↗</a>` : ""}
+        </div>
+      </article>
+    `
+  }).join("")
+}
+
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
+function daysBetween(start, end) {
+  return Math.ceil((startOfDay(end) - startOfDay(start)) / 86400000)
+}
+
+function formatPersianDate(date) {
+  return new Intl.DateTimeFormat("fa-IR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  }).format(date)
+}
+
+function formatPersianDay(date) {
+  return new Intl.DateTimeFormat("fa-IR", { day: "numeric" }).format(date)
+}
+
+function formatPersianMonth(date) {
+  return new Intl.DateTimeFormat("fa-IR", { month: "short" }).format(date)
 }
 
 function restoreTheme() {
