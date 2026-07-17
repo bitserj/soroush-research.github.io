@@ -7,7 +7,7 @@ window.APP_CONFIG = {
 
   links: {
     googleSheet: "https://docs.google.com/spreadsheets/d/1DwnB1iZFr1KZeg88pc4TFMSGV5ROkImfsRX06pEnnaI/edit?pli=1&gid=6886393#gid=6886393",
-    googleDriveFolder: "https://drive.google.com/drive/folders/1eqqJQo0VxklgdcvUGE4BHcJ1rcn94eop"
+    googleDriveFolder: "https://drive.google.com/drive/folders/1eqqJQo0VxklgdcvUGE4BHcJ1rcn94eop?usp=drive_link"
   },
 
   csv: {
